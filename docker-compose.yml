@@ -1,0 +1,48 @@
+services:
+  url_database:
+    build: ./database
+    container_name: url_database
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "6379"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  url_shortener:
+    build: ./url-shortener
+    container_name: url_shortener_service
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=url_database
+      - DB_PORT=6379
+      - TZ=Asia/Novosibirsk
+    depends_on:
+      url_database:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  statistics:
+    build: ./statistics_service
+    container_name: statistics_service
+    ports:
+      - "8081:8081"
+    environment:
+      - PORT=8081
+      - DB_HOST=url_database
+      - DB_PORT=6379
+      - TZ=Asia/Novosibirsk
+    depends_on:
+      url_database:
+        condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
